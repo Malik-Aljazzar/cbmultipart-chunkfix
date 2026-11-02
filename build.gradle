@@ -113,8 +113,9 @@ def changelogSection = providers.provider {
     "## [${mod_version}]\n\n${body}"
 }
 
-// Upload to CurseForge + GitHub release, run by .github/workflows/release.yml on a version tag. Without
-// CURSEFORGE_API_KEY (e.g. on a dev machine) it's always a dry run: the upload is only written to build/publishMods.
+// GitHub release only - this mod is deliberately not on CurseForge (it is a server-side fix for one pack).
+// Run by .github/workflows/release.yml on a version tag. Without GITHUB_TOKEN (e.g. on a dev machine) it's
+// always a dry run: the release is only written to build/publishMods.
 publishMods {
     file = jar.archiveFile
     changelog = changelogSection
@@ -122,19 +123,8 @@ publishMods {
     type = STABLE
     displayName = "${mod_id}-${mod_version}"
     modLoaders.add('neoforge')
-    dryRun = providers.environmentVariable('CURSEFORGE_API_KEY').getOrNull() == null
+    dryRun = providers.environmentVariable('GITHUB_TOKEN').getOrNull() == null
 
-    curseforge {
-        // Empty until the CurseForge project exists - release.yml refuses to publish while it is.
-        projectId = providers.gradleProperty('curseforge_project_id').map { it.trim() }
-        accessToken = providers.environmentVariable('CURSEFORGE_API_KEY')
-        minecraftVersions.add(minecraft_version)
-        // Server-side mod: the mixin patches CBMultipart's server chunk-load scheduler only.
-        clientRequired = false
-        serverRequired = true
-        requires('cb-multipart')
-        requires('codechicken-lib-1-8')
-    }
     github {
         accessToken = providers.environmentVariable('GITHUB_TOKEN')
         repository = project.github_repository
