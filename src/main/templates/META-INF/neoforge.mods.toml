@@ -1,0 +1,59 @@
+# NeoForge mod metadata for CBMultipart Chunk Scheduler Fix
+
+modLoader="javafml" #mandatory
+loaderVersion="${loader_version_range}" #mandatory
+license="${mod_license}"
+issueTrackerURL="https://github.com/TheCBProject/CBMultipart/issues/197"
+
+[[mods]] #mandatory
+modId="${mod_id}" #mandatory
+version="${mod_version}" #mandatory
+displayName="${mod_name}" #mandatory
+
+description='''
+Server-side-only fix for CBMultipart's "Chunk already loaded?" RuntimeException
+crash during chunk generation/loading.
+
+Root cause (verified against CBMultipart 3.5.0.155's real bytecode, see
+specification/SPEC.md): WorldTickScheduler.onChunkUnload only clears a
+ChunkScheduler's cached `chunk` reference if that scheduler is still in the
+`ticking` list at the moment the chunk unloads. A scheduler that already
+finished its tick cycle for that server tick has already left `ticking`, so
+its stale `chunk` reference survives the unload. The ChunkScheduler itself is
+never removed from WorldTickScheduler's `chunks` map (keyed by ChunkPos), so
+the next time that exact chunk loads again, onChunkLoad finds the same
+stale-but-non-null reference and throws instead of accepting the new chunk.
+
+This mod injects into ChunkScheduler.onChunkLoad and clears a stale
+reference (chunk != null but chunk.loaded == false) before CBMultipart's own
+check runs, instead of letting it throw. A genuine double-load (the old
+chunk reference still actually loaded) still throws exactly as before - only
+the known-stale case is fixed.
+
+Upstream issue: https://github.com/TheCBProject/CBMultipart/issues/197 (open,
+unfixed as of this mod's creation).
+'''
+
+[[mixins]]
+config="${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="SERVER"
+
+[[dependencies.${mod_id}]]
+    modId="cb_multipart"
+    type="required"
+    versionRange="[${cb_multipart_version},)"
+    ordering="AFTER"
+    side="SERVER"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="SERVER"
